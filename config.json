@@ -1,0 +1,20 @@
+{
+  "hardware": "",
+  "account": "",
+  "password": "",
+  "mi_did": "",
+  "bot": "",
+  "openai_key": "",
+  "openai_backend": "",
+  "gpt_options": {},
+  "thinking": ["请稍等","让我想一想","让我想一下"],
+  "change_prompt_keyword": ["我是","现在你是"],
+  "prompt": "你是小爱，我是主人。对话没指明位置地点时都默认是北京。",
+  "keyword": ["请","你","帮我"],
+  "start_conversation": ["我们","咱们"],
+  "end_conversation": ["再见","拜拜","好的","退下","滚"],
+  "mute_xiaoai": false,
+  "use_command": true,
+  "stream": false,
+  "verbose": false
+}
