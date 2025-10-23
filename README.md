@@ -23,6 +23,7 @@
 ## 准备
 
 1. 下载xiaobot代码
+进入到%GOPATH%的src目录下：
 ```
    git clone https://github.com/axcom/xiaobot.git
 ```
