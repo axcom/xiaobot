@@ -51,7 +51,7 @@
    ./xiaobot -t > /dev/null 2>&1 &
    
    # 使用tcpdump监控外发流量
-   tcpdump -i $INTERFACE -n ether src $TARGET_MAC 'and dst port 443 and (tcp[tcpflags] & tcp-syn) != 0 and tcp[13]=0x02 and dst 220.181.106.172' -v -l 2>/dev/null | while read -r line; do
+   tcpdump -i $INTERFACE -n ether src $TARGET_MAC 'and dst port 443 and (tcp[tcpflags] & tcp-syn) != 0 and tcp[13]=0x02 and (dst 220.181.106.172 or dst 106.120.178.12)' -v -l 2>/dev/null | while read -r line; do
        # 获取当前时间戳
        current_time=$(date +%s)
        
@@ -178,7 +178,7 @@
    ./xiaobot -t > /dev/null 2>&1 &
    
    # 使用tcpdump监控外发流量
-   tcpdump -i $INTERFACE -n ether src $TARGET_MAC 'and dst port 443 and (tcp[tcpflags] & tcp-syn) != 0 and tcp[13]=0x02 and dst 220.181.106.172' -v -l 2>/dev/null | while read -r line; do
+   tcpdump -i $INTERFACE -n ether src $TARGET_MAC 'and dst port 443 and (tcp[tcpflags] & tcp-syn) != 0 and tcp[13]=0x02 and (dst 220.181.106.172 or dst 106.120.178.12)' -v -l 2>/dev/null | while read -r line; do
        # 获取当前时间戳
        current_time=$(date +%s)
        
@@ -443,3 +443,72 @@
    journalctl -u rc-local.service -b  # 查看本次启动的日志
    ```
 
+
+附：
+bettercap 有内存泄漏问题，在 bettercap 因为 OOM 被杀死时，自动重启 rc-local.service，从而让 bettercap 和 xiaobot 一起重新启动。
+
+sudo vim /etc/systemd/system/rc-local.service
+
+[Service]
+Type=forking
+ExecStart=/etc/rc.local start
+TimeoutSec=0
+RemainAfterExit=yes
+GuessMainPID=no
+
+修改或添加以下几个关键参数：
+Type=: 将其设置为 simple。这表示服务启动后，systemd 会持续监控其主进程。
+Restart=: 设置为 on-failure。这表示只有当服务进程以非零退出码退出、被信号终止（除了 SIGPIPE）或超时等 “失败” 情况时，systemd 才会自动重启它。当 bettercap 被 OOM Killer 发送 SIGKILL 信号杀死时，整个 rc-local.service 的控制组会被认为是失败的，从而触发重启。
+KillMode=: 设置为 control-group。这是默认值，但明确写出来更好。它表示当 systemd 需要停止服务时，会杀死该服务的整个控制组（包括所有子进程）。当子进程（如 bettercap）被杀死导致服务失败时，这个设置也有助于 systemd 正确处理。
+ExecStart=: 确保 ExecStart 指向你的 /etc/rc.local 脚本。
+
+[Service]
+Type=simple  # <-- 修改或添加这一行
+Restart=on-failure  # <-- 添加这一行
+KillMode=control-group  # <-- 添加这一行 (可选，但推荐)
+ExecStart=/etc/rc.local start
+TimeoutSec=0
+RemainAfterExit=yes
+GuessMainPID=no  # <-- 对于 Type=simple 且 RemainAfterExit=yes 的情况，建议设置为 no
+
+说明:
+RemainAfterExit=yes 是 rc-local.service 的传统设置，它告诉 systemd 即使主进程退出了，也要认为服务处于 “活动” 状态。结合 Type=simple 和 Restart=on-failure，当子进程崩溃导致整个控制组失败时，systemd 仍然会触发重启。
+GuessMainPID=no 是一个好习惯，因为 rc.local 脚本可能会启动多个进程，systemd 自动猜测主进程可能不准确。
+
+重新加载 systemd 配置并重启服务
+1. 通知 systemd 有配置文件发生了变化：
+sudo systemctl daemon-reload
+2. 重启 rc-local.service 以应用新的配置：
+sudo systemctl restart rc-local.service
+3. 检查服务状态，确保它正在运行：
+sudo systemctl status rc-local.service
+
+
+其他方法：使用 cron 定时执行重启命令
+cron 是 Linux 系统中用于定时执行任务的守护进程。我们可以创建一个 cron 任务来每周重启 rc-local.service。
+步骤 1: 编辑 cron 任务列表
+首先，使用 crontab 命令编辑当前用户（建议使用 root 用户，因为管理系统服务需要 root 权限）的 cron 任务：
+bash
+sudo crontab -e
+如果你是第一次编辑，系统可能会让你选择一个编辑器（如 nano, vim 等）。
+步骤 2: 添加定时重启任务
+在打开的文件末尾，添加以下一行内容，用于设置每周定时重启。
+示例：每周日凌晨 3 点重启
+bash
+0 3 * * 0 systemctl restart rc-local.service
+cron 表达式解析:
+0: 分钟 (0-59)
+3: 小时 (0-23)
+*: 日 (1-31)
+*: 月 (1-12)
+0: 星期 (0-6, 0 代表星期日)
+你可以根据需要调整这个时间：
+每周一早上 6 点 30 分： 30 6 * * 1 systemctl restart rc-local.service
+每周五晚上 11 点： 0 23 * * 5 systemctl restart rc-local.service
+步骤 3: 保存并退出
+保存文件并退出编辑器。cron 会自动应用新的任务。
+步骤 4: 验证 cron 任务
+你可以使用以下命令查看当前用户的 cron 任务列表，确认是否添加成功：
+bash
+sudo crontab -l
+你应该能看到你刚刚添加的那一行。
