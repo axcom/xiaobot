@@ -445,8 +445,8 @@
 
 
 附：
-bettercap 有内存泄漏问题，在 bettercap 因为 OOM 被杀死时，自动重启 rc-local.service，从而让 bettercap 和 xiaobot 一起重新启动。
-
+bettercap 有内存泄漏问题，在 bettercap 因为 OOM 被杀死时，可通过自动重启 rc-local.service，从而让 bettercap 和 xiaobot 一起重新启动。
+```
 sudo vim /etc/systemd/system/rc-local.service
 
 [Service]
@@ -512,3 +512,4 @@ cron 表达式解析:
 bash
 sudo crontab -l
 你应该能看到你刚刚添加的那一行。
+```
