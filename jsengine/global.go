@@ -68,6 +68,16 @@ func (s *SharedData) Set(key string, val interface{}) {
 	s.data[key] = val
 }
 
+func (s *SharedData) Update(key string, val int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if i, ok := s.data[key]; ok {
+		s.data[key] = i.(int) + val
+	} else {
+		s.data[key] = val
+	}
+}
+
 func (s *SharedData) Delete(key string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -216,10 +216,12 @@ func injectJSContext(vm *goja.Runtime, w http.ResponseWriter, r *http.Request) e
 
 func Do_Action(w http.ResponseWriter, r *http.Request, customJSScript *string) (err error) {
 	defer func() {
+		global.Update("runcount", -1)
 		if r := recover(); r != nil {
 			log.Error("Recovered from panic:", r)
 		}
 	}()
+	global.Update("runcount", +1)
 
 	// 1. 创建 JS 虚拟机
 	engine := vmPool.Get().(*Engine)
