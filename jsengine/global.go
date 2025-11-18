@@ -72,7 +72,13 @@ func (s *SharedData) Update(key string, val int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if i, ok := s.data[key]; ok {
-		s.data[key] = i.(int) + val
+		switch i.(type) {
+		case int:
+			s.data[key] = i.(int) + val
+		case float64:
+			s.data[key] = i.(float64) + float64(val)
+		}
+		//s.data[key] += 1
 	} else {
 		s.data[key] = val
 	}
