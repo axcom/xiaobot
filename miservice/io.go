@@ -59,11 +59,50 @@ func (s *IOService) Request(uri string, data map[string]interface{}) (map[string
 	return result, nil
 }
 
+/*
+   {
+     "adminFlag": 1,
+     "bssid": "12:34:56:78:9A:BC",
+     "desc": "Device online ",
+     "did": "000000000",
+     "extra": {
+       "fw_version": "1.0.7",
+       "isPasswordEncrypt": 0,
+       "isSetPincode": 0,
+       "needVerifyCode": 0,
+       "pincodeType": 0
+     },
+     "family_id": 0,
+     "internet_ip": "111.111.111.111",
+     "isOnline": true,
+     "latitude": "0.0",
+     "localip": "192.168.3.1",
+     "longitude": "0.0",
+     "mac": "50:00:00:00:00:AA",
+     "model": "xiaomi.wifispeaker.l05c",
+     "name": "小爱音箱Play增强版",
+     "p2p_id": "",
+     "parent_id": "",
+     "parent_model": "",
+     "password": "",
+     "pd_id": 4039,
+     "permitLevel": 16,
+     "pid": "0",
+     "reset_flag": 0,
+     "rssi": -51,
+     "shareFlag": 0,
+     "show_mode": 1,
+     "ssid": "HUAWEI-H6",
+     "token": "",
+     "uid": 0000000000
+   }
+*/
 type DeviceInfo struct {
-	Name  string `json:"name"`
-	Model string `json:"model"`
-	Did   string `json:"did"`
-	Token string `json:"token"`
+	Name    string `json:"name"`
+	Model   string `json:"model"`
+	Did     string `json:"did"`
+	LocalIP string `json:"localip"`
+	Token   string `json:"token"`
 }
 
 func (s *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (devices []DeviceInfo, err error) {
@@ -81,10 +120,11 @@ func (s *IOService) DeviceList(getVirtualModel bool, getHuamiDevices int) (devic
 	for i, item := range deviceList {
 		device := item.(map[string]interface{})
 		devices[i] = DeviceInfo{
-			Name:  device["name"].(string),
-			Model: device["model"].(string),
-			Did:   device["did"].(string),
-			Token: device["token"].(string),
+			Name:    device["name"].(string),
+			Model:   device["model"].(string),
+			Did:     device["did"].(string),
+			LocalIP: device["localip"].(string),
+			Token:   device["token"].(string),
 		}
 	}
 	return

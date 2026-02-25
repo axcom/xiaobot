@@ -7,6 +7,7 @@ import (
 	"ninego/log"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 	"xiaobot"
@@ -33,8 +34,14 @@ func StartWebuiServer(cfg *xiaobot.Config, wAddr string, show int) {
 	config = cfg
 
 	if strings.IndexByte(wAddr, ':') == -1 {
-		WebPort = wAddr
-		WebAddr = ""
+		_, err := strconv.Atoi(wAddr)
+		if err == nil {
+			WebPort = wAddr
+			WebAddr = ""
+		} else {
+			WebPort = ""
+			WebAddr = wAddr
+		}
 	} else {
 		WebAddr = strings.Split(wAddr, ":")[0] // 地址部分
 		WebPort = strings.Split(wAddr, ":")[1] // 端口部分
@@ -42,13 +49,13 @@ func StartWebuiServer(cfg *xiaobot.Config, wAddr string, show int) {
 	if WebPort == "" {
 		WebPort = "9997"
 	}
+
 	if WebAddr != "" && WebAddr != "0.0.0.0" {
 		wAddr = WebAddr + ":" + WebPort
 	} else {
 		wAddr = "127.0.0.1" + wAddr
 	}
-	log.Printf("http://%s\n", wAddr)
-
+	//log.Printf("http://%s\n", wAddr)
 	if show != 0 {
 		go func() {
 			time.Sleep(time.Second)
@@ -59,12 +66,13 @@ func StartWebuiServer(cfg *xiaobot.Config, wAddr string, show int) {
 			}
 		}()
 	}
+
 	mux := Router()
 	server = &http.Server{
 		Addr:           WebAddr + ":" + WebPort,
 		Handler:        mux,
 		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   05 * time.Minute,
+		WriteTimeout:   5 * time.Minute,
 		MaxHeaderBytes: 1 << 20,
 	}
 	go func() {

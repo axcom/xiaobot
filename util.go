@@ -190,7 +190,7 @@ func Normalize(message string) string {
 type Channel struct {
 	C      chan interface{}
 	closed bool
-	mut    sync.Mutex
+	mut    sync.RWMutex
 }
 
 func NewChannel() *Channel {
@@ -201,7 +201,7 @@ func NewChannelSize(size int) *Channel {
 	return &Channel{
 		C:      make(chan interface{}, size),
 		closed: false,
-		mut:    sync.Mutex{},
+		mut:    sync.RWMutex{},
 	}
 }
 
@@ -215,8 +215,8 @@ func (c *Channel) Close() {
 }
 
 func (c *Channel) IsClosed() bool {
-	c.mut.Lock()
-	defer c.mut.Unlock()
+	c.mut.RLock()
+	defer c.mut.RUnlock()
 	return c.closed
 }
 

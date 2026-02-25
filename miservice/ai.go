@@ -129,6 +129,12 @@ func (mnas *AIService) PlayerPause(deviceId string) (map[string]interface{}, err
 	return res, err
 }
 
+func (mnas *AIService) PlayerStop(deviceId string) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := mnas.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "stop", "media": "app_ios"}, &res)
+	return res, err
+}
+
 func (mnas *AIService) PlayerPlay(deviceId string) (map[string]interface{}, error) {
 	var res map[string]interface{}
 	err := mnas.UbusRequest(deviceId, "player_play_operation", "mediaplayer", map[string]interface{}{"action": "play", "media": "app_ios"}, &res)
@@ -139,16 +145,41 @@ type PlayerStatus struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
-		Code int    `json:"code"`
+		Code int    `json:"code"` //noError=0
 		Info string `json:"info"`
 	} `json:"data"`
 }
+type InfoData struct {
+	Status         int `json:"status"`
+	Volume         int `json:"volume"`
+	LoopType       int `json:"loop_type"`
+	MediaType      int `json:"media_type"`
+	PlaySongDetail struct {
+		AudioID  string `json:"audio_id"`
+		Position int    `json:"position"`
+		Duration int    `json:"duration"`
+	} `json:"play_song_detail"`
+	TrackList []string `json:"track_list"`
+}
 
-func (mnas *AIService) PlayerGetStatus(deviceId string) (
-	*PlayerStatus, error) {
+func (mnas *AIService) PlayerGetStatus(deviceId string) (*PlayerStatus, error) {
 	var res PlayerStatus
 	err := mnas.UbusRequest(deviceId, "player_get_play_status", "mediaplayer", map[string]interface{}{"media": "app_ios"}, &res)
 	return &res, err
+}
+
+/*async def player_set_loop(self, deviceId, type=1): //"loop"=0
+  return await self.ubus_request(
+      deviceId,
+      "player_set_loop",
+      "mediaplayer",
+      {"media": "common", "type": type},
+  )
+*/
+func (mnas *AIService) PlayerSetLoop(deviceId string, playType int) (map[string]interface{}, error) {
+	var res map[string]interface{}
+	err := mnas.UbusRequest(deviceId, "player_set_loop", "mediaplayer", map[string]interface{}{"media": "common", "type": playType}, &res)
+	return res, err
 }
 
 func (mnas *AIService) PlayByUrl(deviceId, url string) (map[string]interface{}, error) {

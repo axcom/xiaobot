@@ -248,12 +248,12 @@ func (mt *MiTalk) miTTS(message string, waitForFinish bool) error {
 			message = ""
 		}
 
-		if err := mt.Box.miTTS(value); err != nil {
+		if err := mt.Box.MiTTS(value); err != nil {
 			return fmt.Errorf("TTS命令执行失败: %w", err)
 		}
 
 		if waitForFinish || message != "" {
-			statusPlaying, _ := mt.Box.speakerIsPlaying()
+			statusPlaying, _ := mt.Box.SpeakerIsPlaying()
 			//不支持查询状态的音箱走sleep延时(按文字长度计算延时的时间)
 			if statusPlaying != 0 && statusPlaying != 1 {
 				elapse := calculateTtsElapse(value)
@@ -263,7 +263,7 @@ func (mt *MiTalk) miTTS(message string, waitForFinish bool) error {
 				//elapsedTime := time.Since(startTime) // 计算耗时
 				//fmt.Println("执行时间：", elapsedTime)
 			}
-			mt.Box.waitForTTSFinish()
+			mt.Box.WaitForTTSFinish()
 		}
 	}
 	return nil
@@ -274,13 +274,13 @@ func (mt *MiTalk) miPlay(url string, waitForFinish bool) error {
 		return nil
 	}
 	mt.Bot.activeSpeakerVoice(0)
-	if err := mt.Box.miPlay(url); err != nil {
+	if err := mt.Box.MiPlay(url); err != nil {
 		log.Error(fmt.Sprintf("play url %v, Error: %v\n", url, err))
 		return err
 	}
 	if waitForFinish {
 		//mt.sleep(?)
-		mt.Box.waitForTTSFinish()
+		mt.Box.WaitForTTSFinish()
 	}
 	return nil
 }
@@ -315,7 +315,7 @@ func (mt *MiTalk) handleConversationControl(query string) bool {
 	if mt.InConversation {
 		if queryIn(query, mt.config.EndConversation) {
 			log.Println("结束对话")
-			mt.Box.stopSpeaker()
+			mt.Box.StopSpeaker()
 			log.Println("恢复bot人设")
 			mt.changePrompt(mt.Bot.Prompt)
 			mt.InConversation = false
@@ -339,7 +339,7 @@ func (mt *MiTalk) handleConversationControl(query string) bool {
 // 处理提示词变更
 func (mt *MiTalk) handlePromptChange(query string) {
 	log.Debug("需要改变bot人设提示语：", query)
-	mt.Box.stopSpeaker()
+	mt.Box.StopSpeaker()
 	if !mt.InConversation {
 		mt.Bot.Prompt = query
 	}
@@ -524,7 +524,7 @@ func (mt *MiTalk) handleConversation(record Record, isMuteMode bool) error {
 					jarvis.RoleContent{Role: "assistant", Content: answer},
 				)
 				if !mt.terminated() /*!isclosed*/ && query != WakeupKeyword && mt.ChatDontTTS == 0 {
-					mt.Box.wakeUp()
+					mt.Box.WakeUp()
 				}
 			}
 		}()

@@ -11,6 +11,7 @@ import (
 	"xiaobot"
 	"xiaobot/jsengine"
 	"xiaobot/log/filelogger"
+	"xiaobot/music"
 	"xiaobot/webui"
 )
 
@@ -131,6 +132,26 @@ func main() {
 	if err := bot.InitAllData(); err != nil {
 		panic(err)
 	}
+	if webui.WebAddr == "" {
+		srvip, err := webui.CheckServerIP(bot.Box.IP_Addr)
+		if err != nil {
+			log.Error("Music Server:", err)
+		}
+		webui.WebAddr = srvip
+	}
+	if webui.WebAddr == "" {
+		log.Println("音乐http服务未能开启,请添加-w启动参数指定本机IP地址。")
+	} else {
+		music.PlayerSvrIP = webui.WebAddr + ":" + webui.WebPort
+		log.Printf("http://%s\n", music.PlayerSvrIP)
+		log.Printf("ws://%s/ws\n", music.PlayerSvrIP)
+	}
+
+	//加载计划任务
+	jsengine.Schedules.FetchFromExecDir()
+	jsengine.Schedules.Start()
+	defer jsengine.Schedules.Stop()
+
 	if *trigger {
 		webui.RunChat(bot)
 		if err = webui.Run(0); err != nil {

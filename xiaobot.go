@@ -137,7 +137,7 @@ func (mt *MiBot) startSpeakerMuteLoop() {
 		return
 	}
 	mt.loopStopSpeaker(SpeakerMuted)
-	mt.Box.stopSpeaker() //立即执行静音
+	mt.Box.StopSpeaker() //立即执行静音
 	//mt.wg.Add(1)
 	go func() {
 		//defer mt.wg.Done()
@@ -151,7 +151,7 @@ func (mt *MiBot) startSpeakerMuteLoop() {
 			if !mt.loopStopSpeaker() {
 				return
 			}
-			mt.Box.stopSpeaker()
+			mt.Box.StopSpeaker()
 		}
 	}()
 }
@@ -265,7 +265,7 @@ func (mt *MiBot) startNewTalk() {
 
 // Run 运行机器人主逻辑（monitor == 0xFFFF 代表非监控模式）
 func (mt *MiBot) Run(monitor int) error {
-	log.Println("Running xiaobot 1.34 now")
+	log.Println("Running xiaobot 1.36 now")
 	if mt.config.MuteXiaoAI && monitor == 0xFFFF {
 		log.Printf("用`%s`开头来提问\n", strings.Join(mt.config.Keywords, "/"))
 	}
@@ -381,7 +381,7 @@ func (mt *MiBot) Chat(query string, mode int) string {
 	}()
 	mt.monitor.Set(0) // 禁止 pollLatestAsk
 	// 提交问题
-	mt.Box.miAction(query)
+	mt.Box.MiAction(query)
 	// 轮循5秒获取query
 	var record Record
 	for i := 0; i < 10*5; i++ {
@@ -448,27 +448,27 @@ func (mt *MiBot) SetVM(bot map[string]interface{}) {
 			defer mt.monitor.Set(0)
 			mt.monitor.Set(0xFFFF) // 非监控模式
 		}
-		err := mt.Box.miTTS(text)
+		err := mt.Box.MiTTS(text)
 		if err != nil {
 			return false
 		}
 		if wait {
-			statusPlaying, _ := mt.Box.speakerIsPlaying()
+			statusPlaying, _ := mt.Box.SpeakerIsPlaying()
 			//不支持查询状态的音箱走sleep延时(按文字长度计算延时的时间)
 			if statusPlaying != 0 && statusPlaying != 1 {
 				elapse := calculateTtsElapse(text)
 				time.Sleep(elapse * time.Second)
 			}
-			mt.Box.waitForTTSFinish()
+			mt.Box.WaitForTTSFinish()
 		} else {
 			time.Sleep(time.Duration(1.5 * float64(time.Second))) //至少延时1.5秒
 		}
 		return true
 	}
-	bot["action"] = mt.Box.miAction
-	bot["playurl"] = mt.Box.miPlay
-	bot["stopspeaker"] = mt.Box.stopSpeaker
-	bot["wakeup"] = mt.Box.wakeUp
+	bot["action"] = mt.Box.MiAction
+	bot["playurl"] = mt.Box.MiPlay
+	bot["stopspeaker"] = mt.Box.StopSpeaker
+	bot["wakeup"] = mt.Box.WakeUp
 	bot["sleep"] = func(sec float64) {
 		time.Sleep(time.Duration(float64(time.Second) * sec))
 	}
@@ -476,5 +476,5 @@ func (mt *MiBot) SetVM(bot map[string]interface{}) {
 		i := calculateTtsElapse(text)
 		return int(i)
 	}
-	bot["wait"] = mt.Box.waitForTTSFinish
+	bot["wait"] = mt.Box.WaitForTTSFinish
 }

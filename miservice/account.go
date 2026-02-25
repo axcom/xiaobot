@@ -307,9 +307,6 @@ func (ma *Account) Request(sid, u string, data url.Values, cb DataCb, headers ht
 		if err != nil {
 			return err
 		}
-		if err != nil {
-			return err
-		}
 		if result.Code == 0 {
 			err = json.Unmarshal(data, output)
 			return err

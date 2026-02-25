@@ -1,6 +1,7 @@
 package xiaobot
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"os"
@@ -43,11 +44,15 @@ type Config struct {
 
 	TokenPath string `json:"-" toml:"-"` //`json:"token_path" toml:"token_path"`
 
+	MusicPath string `json:"music_path" toml:"music_path"`
+
 	QueryJS string            `json:"-" toml:"-"`
 	TaskJS  map[string]string `json:"-" toml:"-"`
 }
 
 func (c *Config) NeedSetup() bool {
+	ParseHardwareCommandDict("xiaomi.ini") //初始化硬件信息
+
 	return c.Account == "" || c.Password == "" || c.Hardware == "" || c.MiDID == ""
 }
 
@@ -70,6 +75,9 @@ func (c *Config) PostInit() error {
 	}
 	if v := os.Getenv("OPENAI_BASE_URL"); v != "" {
 		c.OpenAIBackend = v
+	}
+	if v := os.Getenv("MUSIC_PATH"); v != "" {
+		c.MusicPath = v
 	}
 	if c.TokenPath == "" {
 		c.TokenPath = filepath.Join(os.Getenv("HOME"), ".mi.token")
@@ -168,6 +176,8 @@ func NewConfigFromOptions(options map[string]interface{}) (*Config, error) {
 			config.GPTOptions = value.(map[string]interface{})
 		case "token_path":
 			//config.TokenPath = value.(string)
+		case "music_path":
+			config.MusicPath = value.(string)
 		}
 	}
 
@@ -224,34 +234,85 @@ var HardwareCommandDict = map[string][5]string{
 	"LX5A":  {"5-1", "5-5", "5-3", "", ""},       // 小爱红外版
 	"LX05A": {"5-1", "5-5", "5-3", "", ""},       // 小爱红外版
 	"LX05":  {"5-1", "5-4", "5-3", "", "1"},      // 小米小爱音箱Play（2019 款）
-	"X10A":  {"7-3", "7-4", "7-1", "", ""},       // 小米智能家庭屏10
+	"X10A":  {"7-3", "7-4", "7-1", "", "1"},      // 小米智能家庭屏10
 	"L17A":  {"7-3", "7-4", "7-1", "", ""},       // Xiaomi Sound Pro
 
-	"L06A":  {"5-1", "5-5", "5-2", "", ""},      // 小爱音箱
-	"LX01":  {"5-1", "5-5", "5-2", "", ""},      // 小爱音箱 mini
-	"L05B":  {"5-3", "5-4", "5-1", ""},          // 小爱音箱 Play
-	"L05C":  {"5-3", "5-4", "5-1", "3,1,1", ""}, // 小米小爱音箱Play增强版
-	"L09A":  {"3-1", "3-5", "3-2", "2,1,1", ""}, // 小爱音箱 Art
-	"LX04":  {"5-1", "5-4", "5-2", "", ""},      // 小爱触屏音箱
-	"ASX4B": {"5-3", "5-4", "5-1", "", ""},      // Xiaomi 智能家庭屏 Mini
-	"X6A":   {"7-3", "7-4", "7-1", "", ""},      // 小米智能家庭屏6
-	"X08E":  {"7-3", "7-4", "7-1", "", "1"},     // Redmi 小爱触屏音箱 Pro 8 英寸
-	"L07A":  {"5-1", "5-5", "5-3", "", ""},      // Redmi小爱音箱Play(l7a)
+	"L06A":  {"5-1", "5-5", "5-2", "", "1"},      // 小爱音箱
+	"LX01":  {"5-1", "5-5", "5-2", "", ""},       // 小爱音箱 mini
+	"L05B":  {"5-3", "5-4", "5-1", "", "1"},      // 小爱音箱 Play
+	"L05C":  {"5-3", "5-4", "5-1", "3,1,1", "1"}, // 小米小爱音箱Play增强版
+	"L09A":  {"3-1", "3-5", "3-2", "2,1,1", ""},  // 小爱音箱 Art
+	"LX04":  {"5-1", "5-4", "5-2", "", "1"},      // 小爱触屏音箱
+	"ASX4B": {"5-3", "5-4", "5-1", "", "1"},      // Xiaomi 智能家庭屏 Mini
+	"X6A":   {"7-3", "7-4", "7-1", "", "1"},      // 小米智能家庭屏6
+	"X08E":  {"7-3", "7-4", "7-1", "", "1"},      // Redmi 小爱触屏音箱 Pro 8 英寸
+	"L07A":  {"5-1", "5-5", "5-3", "", ""},       // Redmi小爱音箱Play(l7a)
 	// add more here https://home.miot-spec.com/
 }
 
 /*# 需要使用 play_musci 接口的设备型号
-NEED_USE_PLAY_MUSIC_API = [
+/*_USE_PLAY_MUSIC_API = [
+    "LX04",
+    "LX05",
+    "L05B",
+    "L05C",
+    "L06",
+    "L06A",
+    "X08A",
+    "X10A",
     "X08C",
     "X08E",
     "X8F",
     "X4B",
-    "LX05",
     "OH2",
     "OH2P",
+    "X6A",
 ]*/
+func ParseHardwareCommandDict(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-var DefaultCommand = [5]string{"5-3", "5-4", "5-1", "3,1", ""}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		// 跳过空行和注释行
+		if line == "" || strings.HasPrefix(line, "//") {
+			continue
+		}
+
+		// 移除行尾注释
+		if idx := strings.Index(line, "//"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+		}
+		if idx := strings.Index(line, "#"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+		}
+
+		// 解析键值对
+		l := strings.Split(line, ":")
+		if len(l) != 2 {
+			continue // 跳过解析失败的行
+		}
+		key := l[0]
+		values := strings.Split(l[1], ",")
+		// 转换为固定长度数组
+		var attr [5]string
+		for i, v := range values {
+			if i >= 5 {
+				break
+			}
+			attr[i] = v
+		}
+		HardwareCommandDict[key] = attr
+	}
+
+	return nil
+}
+
+var DefaultCommand = [5]string{"5-3", "5-4", "5-1", "3,1", "1"}
 
 var JarvisKeyWords = []string{"请", "你", "帮我"}
 var ChangePromptKeyWord = []string{"你是", "我是"}

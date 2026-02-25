@@ -27,7 +27,8 @@ type XiaoMi struct {
 	token  miservice.TokenStore
 
 	deviceID string
-	MacAddr  string //音箱MAC地址
+	MacAddr  string //音箱MAC地址 （用于ARP欺骗）
+	IP_Addr  string //音箱IP地址（用于Music）
 
 	account     *miservice.Account
 	minaService *miservice.AIService
@@ -141,6 +142,7 @@ func (mt *XiaoMi) initDataHardware() error {
 		for _, d := range devices {
 			if strings.HasSuffix(d.Model, strings.ToLower(mt.config.Hardware)) {
 				mt.config.MiDID = d.Did
+				mt.IP_Addr = d.LocalIP
 				found = true
 				break
 			}
@@ -151,6 +153,7 @@ func (mt *XiaoMi) initDataHardware() error {
 	}
 
 	hardwareData, err := mt.minaService.DeviceList(0)
+	log.Debug("DeviceList：", hardwareData)
 	if err != nil {
 		return err
 	}
@@ -174,25 +177,39 @@ func (mt *XiaoMi) initDataHardware() error {
 		return errors.New("we have no hardware: " + mt.config.Hardware + " please use micli mina to check")
 	}
 
+	// 查找IP（可选）
+	if mt.IP_Addr == "" {
+		devices, err := mt.miioService.DeviceList(false, 0)
+		if err == nil {
+			for _, device := range devices {
+				if mt.config.MiDID == device.Did {
+					mt.IP_Addr = device.LocalIP
+					break
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
 type StatusInfo struct {
-	Status   int `json:"status"`
-	Volume   int `json:"volume"`
-	LoopType int `json:"loop_type"`
+	Status int `json:"status"`
+	Volume int `json:"volume"`
 }
 
-/*func (mt *XiaoMi) speakerIsPlaying() (bool, error) {
-	res, err := mt.minaService.PlayerGetStatus(mt.deviceID)
-	if err != nil {
-		return false, err
+/*
+	func (mt *XiaoMi) speakerIsPlaying() (bool, error) {
+		res, err := mt.minaService.PlayerGetStatus(mt.deviceID)
+		if err != nil {
+			return false, err
+		}
+		var info StatusInfo
+		json.Unmarshal([]byte(res.Data.Info), &info)
+		return info.Status == 1, nil
 	}
-	var info StatusInfo
-	json.Unmarshal([]byte(res.Data.Info), &info)
-	return info.Status == 1, nil
-}*/
-func (mt *XiaoMi) speakerIsPlaying() (int, error) {
+*/
+func (mt *XiaoMi) SpeakerIsPlaying() (int, error) {
 	if mt.config.UseCommand {
 		w := mt.hardwareCommand(StateIndex)
 		state, err := mt.miioService.MiotGetProp(mt.config.MiDID, propId(w))
@@ -212,9 +229,31 @@ func (mt *XiaoMi) speakerIsPlaying() (int, error) {
 		return info.Status, nil
 	}
 }
+func (mt *XiaoMi) MusicIsPlaying() (int, error) {
+	if mt.config.UseCommand {
+		w := mt.hardwareCommand(StateIndex)
+		state, err := mt.miioService.MiotGetProp(mt.config.MiDID, propId(w))
+		if err == nil {
+			return state.(int), nil
+		}
+	}
+	res, err := mt.minaService.PlayerGetStatus(mt.deviceID)
+	if err != nil {
+		return 2, fmt.Errorf("获取播放状态失败: %w", err)
+	}
+	var info StatusInfo
+	if err := json.Unmarshal([]byte(res.Data.Info), &info); err != nil {
+		return 2, fmt.Errorf("解析播放状态失败: %w", err)
+	}
+	return info.Status, nil
+}
 
-func (mt *XiaoMi) stopSpeaker() error {
+func (mt *XiaoMi) StopSpeaker() error {
 	_, err := mt.minaService.PlayerPause(mt.deviceID)
+	return err
+}
+func (mt *XiaoMi) StopPlayer() error {
+	_, err := mt.minaService.PlayerStop(mt.deviceID)
 	return err
 }
 
@@ -246,7 +285,7 @@ func actionId(action string) []int {
 	return []int{siid, iid}
 }
 
-func (mt *XiaoMi) wakeUp() {
+func (mt *XiaoMi) WakeUp() {
 	if _, err := mt.miioService.MiotAction(mt.config.MiDID, actionId(mt.hardwareCommand(WakeupIndex)), nil); err == nil {
 		return
 	}
@@ -258,7 +297,7 @@ func (mt *XiaoMi) wakeUp() {
 }
 
 // miTTS 文本转语音，优化分片处理
-func (mt *XiaoMi) miTTS(message string) error {
+func (mt *XiaoMi) MiTTS(message string) error {
 	message = strings.TrimSpace(message)
 	if message == "" {
 		return nil
@@ -281,7 +320,7 @@ func (mt *XiaoMi) miTTS(message string) error {
 	return nil
 }
 
-func (mt *XiaoMi) waitForTTSFinish() {
+func (mt *XiaoMi) WaitForTTSFinish() {
 	/*for {
 		isPlaying, _ := mt.speakerIsPlaying()
 		if !isPlaying {
@@ -290,7 +329,7 @@ func (mt *XiaoMi) waitForTTSFinish() {
 		time.Sleep(1 * time.Second)
 	}*/
 	for {
-		statusPlaying, err := mt.speakerIsPlaying()
+		statusPlaying, err := mt.SpeakerIsPlaying()
 		if err != nil || statusPlaying != 1 {
 			return
 		}
@@ -298,7 +337,7 @@ func (mt *XiaoMi) waitForTTSFinish() {
 	}
 }
 
-func (mt *XiaoMi) miPlay(url string) error {
+func (mt *XiaoMi) MiPlay(url string) error {
 	m := mt.hardwareCommand(MusicIndex)
 	if m != "" {
 		v, err := mt.minaService.PlayByMusicUrl(mt.deviceID, url)
@@ -316,7 +355,33 @@ func (mt *XiaoMi) miPlay(url string) error {
 	return nil
 }
 
-func (mt *XiaoMi) miAction(message string) error {
+func (mt *XiaoMi) MiAction(message string) error {
 	_, err := mt.miioService.MiotAction(mt.config.MiDID, actionId(mt.hardwareCommand(ActionIndex)), []interface{}{message, 0})
+	return err
+}
+
+func (mt *XiaoMi) MiSetVolume(value int) error {
+	_, err := mt.minaService.PlayerSetVolume(mt.deviceID, value)
+	return err
+}
+
+func (mt *XiaoMi) MiGetVolume() int {
+	res, err := mt.minaService.PlayerGetStatus(mt.deviceID)
+	if err != nil || res.Data.Code != 0 {
+		return -1
+	}
+	var info StatusInfo
+	if err := json.Unmarshal([]byte(res.Data.Info), &info); err != nil {
+		return -1
+	}
+	return info.Volume
+}
+
+func (mt *XiaoMi) MiPlayLoop(loop bool) error {
+	itype := 1
+	if loop {
+		itype = 0
+	}
+	_, err := mt.minaService.PlayerSetLoop(mt.deviceID, itype)
 	return err
 }

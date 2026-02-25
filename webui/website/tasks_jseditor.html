@@ -136,6 +136,14 @@
             gap: 8px;
         }
         
+        #backBtn {
+            background-color: #f44336;
+        }
+        
+        #backBtn:hover {
+            background-color: #d32f2f;
+        }
+        
         #testBtn {
             background-color: #2ecc71;
         }
@@ -316,9 +324,14 @@
                 <button type="button" id="testBtn">
                     <i class="fa fa-play"></i> 测试脚本
                 </button>
-                <button type="submit" id="saveBtn">
-                    <i class="fa fa-save"></i> 保存脚本
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" id="saveBtn">
+                        <i class="fa fa-save"></i> 保存脚本
+                    </button>
+                    <button type="button" id="backBtn" onclick="Back()">
+                        <i class="fa fa-arrow-left"></i> 返回
+                    </button>
+                </div>
             </div>
             
             <div id="statusMessage" class="status-message"></div>
@@ -358,6 +371,10 @@
         const taskList = document.getElementById('taskList');
         
         let codeMirrorEditor;
+        
+        function Back() {
+            window.location.href = 'index.html';
+        }
         
         // 页面加载时初始化编辑器
         document.addEventListener('DOMContentLoaded', () => {

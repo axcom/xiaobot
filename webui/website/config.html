@@ -395,6 +395,19 @@
                 <p class="mt-1 text-sm text-neutral-500">访问AI服务的代理地址（可选）</p>
               </div>
             </div>
+            
+            <!-- Music文件夹 -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+              <label for="music-folder" class="text-neutral-700 font-medium pt-2 md:pt-0">
+                <i class="fa fa-music mr-2 text-primary"></i>Music文件夹
+              </label>
+              <div class="md:col-span-2 space-y-2">
+                <div class="flex gap-3">
+                  <input type="text" id="music-folder" name="music_path" class="flex-1 px-4 py-2.5 rounded-lg border border-neutral-300 input-focus transition-all duration-200 bg-white" placeholder="例如：D:\\Music 或 /home/user/Music">
+                </div>
+                <p class="mt-1 text-sm text-neutral-500">音乐文件所在的本地目录路径</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -475,6 +488,7 @@
         document.getElementById('stream').checked = config.stream || false;
         
         document.getElementById('proxy').value = config.proxy || '';
+        document.getElementById('music-folder').value = config.music_path || '';
 
         // 页面加载时初始化按钮状态
         checkCredentials();
@@ -675,6 +689,7 @@
           openai_backend: document.getElementById('openai-backend').value,
           proxy: document.getElementById('proxy').value,
           mi_did: document.getElementById('mi-did').value,
+          music_path: document.getElementById('music-folder').value,
           keyword: document.getElementById('keyword').value.split(',').map(k => k.trim()).filter(k => k),
           thinking: document.getElementById('thinking').value.split(',').map(k => k.trim()).filter(k => k),
           change_prompt_keyword: document.getElementById('change-prompt-keyword').value.split(',').map(k => k.trim()).filter(k => k),
