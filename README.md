@@ -218,6 +218,7 @@ use_play_musci  是否使用play_musci接口(1=使用)
   ```
   xiaobot -w 192.168.1.8:9997
   ```
+- xiaobot自身目前支持mp3/wav音乐文件，播放其他格式音乐需安装 FFmpeg 工具。安装后通过 FFMPEG_PATH 环境变量指定 ffprobe 的目录。
 
 ### 5. 定时任务功能
 
