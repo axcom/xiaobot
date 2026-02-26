@@ -1027,7 +1027,7 @@
                 start_time: getStartTime(),
                 lunar: document.getElementById('useLunar').checked ? document.getElementById('lunarDate').textContent : '',
                 job_cycle: getJobCycle(),
-                cycle_detiles: getCycleDetails(),
+                cycle_details: getCycleDetails(),
                 skip_holidays: document.getElementById('skipHolidays').checked,
                 skip_weekdays: document.getElementById('skipWeekdays').checked,
                 job_repeat: document.querySelector('input[name="taskRepeat"][value="interval"]').checked,
@@ -1093,13 +1093,7 @@
             if (confirm('确定要删除这个任务吗？')) {
                 const filename = currentTask.dataset.filename;
                 
-                fetch('/gcron/delete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ filename: filename })
-                })
+                fetch(`/gcron/delete?filename=${encodeURIComponent(filename)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -1216,7 +1210,7 @@
             // 填充执行周期
             setJobCycle(task.job_cycle);
             updateCycleOptions();
-            setCycleDetails(task.cycle_detiles);
+            setCycleDetails(task.cycle_details);
             
             // 填充跳过选项
             document.getElementById('skipHolidays').checked = task.skip_holidays;

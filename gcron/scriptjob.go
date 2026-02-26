@@ -92,7 +92,7 @@ type CronJob struct {
 	Lunar     string    `json:"lunar"`      //农历
 
 	JobCycle       int    `json:"job_cycle"`       //周期类型: 0=一次 1=每日 2=每周 3=每月 -1=每年
-	CycleDetails   []int  `json:"cycle_detiles"`   //周期明细 bits=0->all, bit30..0=1~31日/1~12月/星期1~7 periodic
+	CycleDetails   []int  `json:"cycle_details"`   //周期明细 bits=0->all, bit30..0=1~31日/1~12月/星期1~7 periodic
 	SkipHolidays   bool   `json:"skip_holidays"`   //跳过节假日
 	SkipWeekdays   bool   `json:"skip_weekdays"`   //跳过工作日
 	JobRepeat      bool   `json:"job_repeat"`      //是否重复
@@ -198,12 +198,27 @@ func (t *CronJob) ParseScheduleDescription() string {
 	return str
 }
 
-func (t *CronJob) Assign(cronJob *CronJob) {
-	schedule := t.Schedule
-	*t = *cronJob
-	t.Schedule = schedule
-	if schedule != nil {
-		*t.Schedule = *Recurring(t)
+func (t *CronJob) Assign(src *CronJob) {
+	// 深度复制基础字段
+	t.Filename = src.Filename
+	t.IsActive = src.IsActive
+	t.Name = src.Name
+	t.StartTime = src.StartTime
+	t.Lunar = src.Lunar
+	t.JobCycle = src.JobCycle
+	t.CycleDetails = make([]int, len(src.CycleDetails))
+	copy(t.CycleDetails, src.CycleDetails)
+	t.SkipHolidays = src.SkipHolidays
+	t.SkipWeekdays = src.SkipWeekdays
+	t.JobRepeat = src.JobRepeat
+	t.RepeatInterval = src.RepeatInterval
+	t.RepeatDuration = src.RepeatDuration
+	t.JobEnd = src.JobEnd
+	t.EndCount = src.EndCount
+	t.EndDate = src.EndDate
+	// 特殊处理Schedule指针
+	if t.Schedule != nil {
+		Recurring(t)
 	}
 }
 
@@ -299,26 +314,33 @@ type PeriodSchedule struct {
 
 // 生成定时任务
 func Recurring(cronJob *CronJob) *PeriodSchedule {
-	// 转换CronJob到PeriodSchedule
-	schedule := &PeriodSchedule{
-		//Task:         *cronJob,
-		Filename:     strings.TrimSuffix(cronJob.Filename, ".json") + ".job",
-		Name:         cronJob.Name,
-		StartTime:    cronJob.StartTime,
-		IsLunar:      cronJob.Lunar != "",
-		TaskCycle:    cronJob.JobCycle,
-		SkipHolidays: cronJob.SkipHolidays,
-		SkipWeekdays: cronJob.SkipWeekdays,
-		TaskRepeat:   cronJob.JobRepeat,
-		TaskEnd:      cronJob.JobEnd,
-		EndCount:     cronJob.EndCount,
-		EndDate:      cronJob.EndDate,
-		RunScript:    "",
-		Job:          nil, // 传递CronJob中的Job接口
-		isTimesOver:  false,
-		repeatCount:  0,
-		runTotal:     0,
+	var schedule *PeriodSchedule
+	if cronJob.Schedule == nil {
+		schedule = &PeriodSchedule{}
+
+		schedule.RunScript = ""
+		schedule.Job = nil
+		schedule.runTotal = 0
+	} else {
+		schedule = cronJob.Schedule
 	}
+	// 转换CronJob到PeriodSchedule
+	schedule.Filename = strings.TrimSuffix(cronJob.Filename, ".json") + ".job"
+	schedule.Name = cronJob.Name
+	schedule.StartTime = cronJob.StartTime
+	schedule.IsLunar = cronJob.Lunar != ""
+	schedule.TaskCycle = cronJob.JobCycle
+	schedule.SkipHolidays = cronJob.SkipHolidays
+	schedule.SkipWeekdays = cronJob.SkipWeekdays
+	schedule.TaskRepeat = cronJob.JobRepeat
+	schedule.TaskEnd = cronJob.JobEnd
+	schedule.EndCount = cronJob.EndCount
+	schedule.EndDate = cronJob.EndDate
+	//schedule.RunScript = ""
+	//schedule.Job = nil // 传递CronJob中的Job接口
+	schedule.isTimesOver = false
+	schedule.repeatCount = 0
+	//schedule.runTotal = 0
 
 	// 转换CycleDetails []int -> int
 	if len(cronJob.CycleDetails) > 0 {
