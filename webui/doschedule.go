@@ -192,6 +192,28 @@ func do_scheduleScript(writer http.ResponseWriter, request *http.Request) {
 }
 
 func do_scheduleTest(writer http.ResponseWriter, request *http.Request) {
+	filename := request.URL.Query().Get("filename")
+	// 更安全的读取方式
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		log.Error("Read body failed:", err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer request.Body.Close() // 确保关闭body
+	jscode := string(body)
+	// 执行
+	exec := jsengine.DefaultScriptExecutor{}
+	if err := exec.Execute(jscode, filename); err != nil {
+		log.Error("Run jscript failed:", err)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("Run", filename, "test - ok")
+	// 设置正确的Content-Type
+	writer.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte("success"))
 }
 
 func do_scheduleSave(writer http.ResponseWriter, request *http.Request) {

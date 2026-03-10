@@ -379,6 +379,26 @@
             color: #333;
             min-width: 50px;
             text-align: center;
+            cursor: text;
+            user-select: none; /* 默认不允许选中文本 */
+            border-radius: 4px;
+            padding: 2px 5px;
+            transition: background-color 0.2s;
+        }
+
+        .time-value:hover {
+            background-color: #e3f2fd;
+        }
+
+        .time-value:focus {
+            outline: 2px solid #007bff;
+            outline-offset: 2px;
+            background-color: #e3f2fd;
+        }
+
+        .time-value::selection {
+            background-color: #007bff;
+            color: white;
         }
 
         .time-labels {
@@ -392,6 +412,7 @@
             font-size: 0.8em;
             color: #666;
             cursor: pointer;
+            user-select: none;
             padding: 2px 5px;
         }
 
@@ -604,7 +625,7 @@
                     <div class="time-picker-container"> <!-- 包裹右侧时间选择区域 -->
                         <div style="display: flex; align-items: center; gap: 10px; padding: 0 20px;">
                             <div class="roller-time-picker">
-                                <div class="time-value" id="hourValue">00</div>
+                                <div class="time-value" id="hourValue" tabindex="0" onmouseenter="focusTimeValue(this)" onmouseleave="blurTimeValue(this)" onwheel="handleTimeWheel(event, 'hour')" onkeydown="handleTimeKeydown(event, 'hour')">00</div>
                                 <div class="time-labels">
                                     <div class="time-label" onclick="adjustRollerTime('hour', 1)">23</div>
                                     <div class="time-label current">时</div>
@@ -612,7 +633,7 @@
                                 </div>
                             </div>
                             <div class="roller-time-picker">
-                                <div class="time-value" id="minuteValue">00</div>
+                                <div class="time-value" id="minuteValue" tabindex="0" onmouseenter="focusTimeValue(this)" onmouseleave="blurTimeValue(this)" onwheel="handleTimeWheel(event, 'minute')" onkeydown="handleTimeKeydown(event, 'minute')">00</div>
                                 <div class="time-labels">
                                     <div class="time-label" onclick="adjustRollerTime('minute', 1)">59</div>
                                     <div class="time-label current">分</div>
@@ -884,6 +905,144 @@
                 minute = (minute + delta + 60) % 60;
                 minuteValue.textContent = minute.toString().padStart(2, '0');
             }
+        }
+
+        // 鼠标进入时聚焦并全选
+        function focusTimeValue(element) {
+            element.focus();
+            // 延迟执行以确保focus生效
+            setTimeout(() => {
+                // 设置用户可选中
+                element.style.userSelect = 'text';
+                // 全选文本
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }, 10);
+        }
+
+        // 鼠标离开时取消聚焦并取消选中
+        function blurTimeValue(element) {
+            element.blur();
+            element.style.userSelect = 'none';
+            // 清除选区
+            window.getSelection().removeAllRanges();
+            
+            // 失焦时验证并修正值
+            validateTimeValue(element);
+        }
+        
+        // 验证并修正时间值
+        function validateTimeValue(element) {
+            let value = parseInt(element.textContent) || 0;
+            const type = element.id === 'hourValue' ? 'hour' : 'minute';
+            
+            if (type === 'hour') {
+                if (value > 23) value = 23;
+                if (value < 0) value = 0;
+            } else {
+                if (value > 59) value = 59;
+                if (value < 0) value = 0;
+            }
+            
+            element.textContent = value.toString().padStart(2, '0');
+        }
+
+        // 键盘输入处理函数
+        function handleTimeKeydown(event, type) {
+            const element = event.target;
+            const maxValue = type === 'hour' ? 23 : 59;
+            
+            // 允许数字键 0-9
+            if (event.key >= '0' && event.key <= '9') {
+                event.preventDefault();
+                
+                // 获取当前文本
+                let currentText = element.textContent;
+                
+                // 始终将新数字替换整个内容（即替换末位）
+                // 如果当前是 "05"，输入 "1" 变成 "01"，再输入 "5" 变成 "15"
+                // 保持最后一位是新输入的，前面是之前的个位数字
+                let newDigit = event.key;
+                let firstDigit = '0';
+                
+                if (currentText.length >= 1) {
+                	firstDigit = currentText.slice(-2, -1)
+                	// 已有至少一位数字，保留最后一位然后加新数字
+                    currentText = currentText.slice(-1) + newDigit;
+                } else {
+                    currentText = newDigit;
+                }
+                
+                // 即时验证并更新显示
+                let value = parseInt(currentText);
+                if (isNaN(value)) value = 0;
+                if (value > maxValue) {
+                	currentText = firstDigit + newDigit;
+                	value = parseInt(currentText, 10);
+                	if (value > maxValue) value = parseInt(newDigit, 10);
+                }
+                
+                element.textContent = value.toString().padStart(2, '0');
+                
+                // 输入后重新选中文本
+                setTimeout(() => {
+                    const range = document.createRange();
+                    range.selectNodeContents(element);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }, 0);
+                
+                return;
+            }
+            
+            // 允许的方向键：上增加、下减少
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                adjustRollerTime(type, 1);
+                return;
+            }
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                adjustRollerTime(type, -1);
+                return;
+            }
+            
+            // 允许 Backspace 和 Delete
+            if (event.key === 'Backspace' || event.key === 'Delete') {
+                return;
+            }
+            
+            // 阻止其他按键
+            event.preventDefault();
+        }
+
+        // 滚轮事件处理函数
+        function handleTimeWheel(event, type) {
+            // 阻止默认滚动行为
+            event.preventDefault();
+            
+            // 检查当前是否处于聚焦状态（光标在元素上）或鼠标是否悬停
+            const element = event.target;
+            const isFocused = document.activeElement === element;
+            const isHovered = element.matches(':hover');
+            
+            // 如果既没有聚焦也没有悬停，不处理滚轮事件
+            if (!isFocused && !isHovered) {
+                return;
+            }
+            
+            // 获得焦点以便后续操作
+            if (!isFocused) {
+                element.focus();
+            }
+            
+            // 判断滚轮滚动方向
+            const delta = event.deltaY > 0 ? -1 : 1;
+            adjustRollerTime(type, delta);
         }
         
         function toggleLunarDate() {

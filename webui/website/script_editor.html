@@ -204,8 +204,8 @@
         
         <form id="jsForm">
             <div class="form-group">
-                <label for="scriptQuestion">日期模拟</label>
-                <input type="text" id="scriptQuestion" placeholder="可输入用于测试的发生日期时间..." />
+                <label for="scriptQuestion">脚本文件:</label>
+                <input type="text" id="scriptQuestion" placeholder="脚本文件名称..." readonly/>
             </div>
             
             <div class="form-group">
@@ -255,6 +255,7 @@
             currentFilename = urlParams.get('filename');
             filename = currentFilename.replace(/\.[^/.]+$/, "") + ".job";
             
+            questionInput.value = filename;
             // 初始化CodeMirror编辑器
             initEditor();
             // 加载脚本数据
@@ -348,7 +349,25 @@ executeTask();`;
             setTimeout(() => {
                 try {
                     // 执行脚本
-                    eval(scriptContent);
+                    fetch(`/schedule/test?filename=${encodeURIComponent(filename)}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain; charset=utf-8'
+                        },
+                        body: scriptContent
+                    })
+                    .then(response => {
+                      if (!response.ok) {
+                        return response.text().then(errorMessage => {
+                          throw new Error(errorMessage);
+                        });
+    
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                      }
+                      return response.text();
+                    });
+                
+                    //eval(scriptContent);
                     showStatusMessage('测试执行成功!', 'success');
                 } catch (error) {
                     showStatusMessage(`测试执行出错: ${error.message}`, 'error');

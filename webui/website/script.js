@@ -106,10 +106,10 @@ function sendMessage() {
 
 	if (payload.stream) {
 		// 创建FormData以支持流式传输
-	    const formData = new FormData();
-	    Object.entries(payload).forEach(([key, value]) => {
-	        formData.append(key, value);
-	    });
+	    //const formData = new FormData();
+	    //Object.entries(payload).forEach(([key, value]) => {
+	    //    formData.append(key, value);
+	    //});
 	
 	    // 初始化机器人消息元素，用于流式拼接内容
 	    const messagesContainer = document.getElementById('messages');
@@ -177,12 +177,12 @@ function sendMessage() {
 			        // 按行分割SSE消息，处理可能的多行数据
 			        const lines = chunk.split('\n');
 			        lines.forEach(line => {
-			            line = line.trim();
+			            //line = line.trim(); 删掉这行！保留原始行内容
 			            // 只处理以data:开头的行
 			            if (line.startsWith('data:')) {
 			                // 提取data:后面的内容
-			                const data = line.slice(5).trim();
-			                if (data !== '[DONE]') {
+			                const data = line.slice(5);
+			                if (data.trim() !== '[DONE]') {
 								accumulatedContent += data;
 			                    messageContent.innerHTML = formatMessage(accumulatedContent);
 			                    // 平滑滚动到底部

@@ -19,10 +19,12 @@ type DefaultScriptExecutor struct{}
 // Execute 执行脚本
 func (e DefaultScriptExecutor) Execute(script string, name string) error {
 	defer func() {
+		global.Update("runcount", -1)
 		if r := recover(); r != nil {
 			log.Error("Recovered from panic:", r)
 		}
 	}()
+	global.Update("runcount", +1)
 
 	// 创建 JS 虚拟机
 	engine := vmPool.Get().(*Engine)
