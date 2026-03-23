@@ -10,7 +10,7 @@ import (
 
 	"xiaobot/jsengine/console"
 	"xiaobot/jsengine/inject/file"
-	"xiaobot/jsengine/inject/shell"
+	"xiaobot/jsengine/inject/tools"
 	"xiaobot/jsengine/inject/vm"
 	"xiaobot/jsengine/inject/xhr"
 
@@ -150,7 +150,7 @@ func NewEngine(proxy ProxyHandler) *Engine {
 		//if err := gojaerror.Enable(runtime); err != nil {
 		//	return
 		//}
-		if err := shell.Enable(runtime); err != nil {
+		if err := tools.Enable(runtime); err != nil {
 			return
 		}
 		if err := file.Enable(runtime); err != nil {

@@ -40,6 +40,8 @@ func LoadStorageFromFile() error {
 		if err != nil {
 			return err
 		}
+		// 初始化值
+		global.Set("runcount", 0)
 	}
 	return nil
 }
