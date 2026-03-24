@@ -733,7 +733,7 @@
                 <div class="radio-group horizontal">
                     <label class="radio-option">
                         <input type="radio" name="taskEnd" value="none" checked onclick="updateEndOptions()">
-                        <span>无(永不结束)</span>
+                        <span>无(按周期执行)</span>
                     </label>
                     <label class="radio-option">
                         <input type="radio" name="taskEnd" value="times" onclick="updateEndOptions()">
@@ -1052,7 +1052,10 @@
             
             if (useLunar.checked) {
                 lunarDate.style.display = 'inline';
-                weeklyRadioOption.style.display = 'none';
+                //weeklyRadioOption.style.display = 'none';
+                weeklyRadioOption.classList.add('disabled'); // 添加.disabled类以改变样式
+        				weeklyRadioOption.style.pointerEvents = 'none'; // 禁止鼠标事件
+        				weeklyRadioOption.querySelector('input').disabled = true; // 禁用内部的单选框
                 
                 // 调用后端API获取农历字串
                 const taskStartDate = document.getElementById('taskStartDate');
@@ -1068,7 +1071,10 @@
                 }
             } else {
                 lunarDate.style.display = 'none';
-                weeklyRadioOption.style.display = 'flex';
+                //weeklyRadioOption.style.display = 'flex';
+                weeklyRadioOption.classList.remove('disabled'); // 如果您有.disabled类来控制样式
+                weeklyRadioOption.style.pointerEvents = 'auto'; // 允许鼠标事件
+                weeklyRadioOption.querySelector('input').disabled = false; // 启用内部的单选框                
             }
         }
         

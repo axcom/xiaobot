@@ -13,7 +13,7 @@
 	fetch、XMLHttpRequest
 	URL
 	File
-	shell、command
+	shell、command、wol
 	
 ## 运行环境​
 
