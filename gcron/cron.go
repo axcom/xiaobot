@@ -233,7 +233,7 @@ func (c *Cron) run() {
 
 		// 双重检查：确保effective在未来
 		if effective.Sub(now) <= 0 {
-			log.Println("警告：effective时间在过去，重置为15年后")
+			log.Println("警告：effective时间在过去，无计划任务可执行")
 			effective = now.AddDate(15, 0, 0)
 		}
 

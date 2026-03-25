@@ -13,7 +13,13 @@
 	fetch、XMLHttpRequest
 	URL
 	File
-	shell、command、wol
+其他：	
+// 单条命令执行	
+	command(cmdstr)
+// 通过调用系统 shell 来执行命令，支持管道 (|) 和输出重定向 (>) 操作
+	shell(cmdrun)
+// 局域网远程开机
+	wol(mac地址[11:22:33:44:55:66], 广播地址[192.168.1.255], UDP端口[9/7])
 	
 ## 运行环境​
 
